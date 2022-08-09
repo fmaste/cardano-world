@@ -317,6 +317,7 @@ in {
       [ -n "''${HOST_IPV6_ADDR:-}" ] && args+=("--host-ipv6-addr" "$HOST_IPV6_ADDR")
       [ -n "''${PORT:-}" ] && args+=("--port" "$PORT")
       [ -n "''${SOCKET_PATH:-}" ] && args+=("--socket-path" "$SOCKET_PATH")
+      [ -n "''${TRACER_SOCKET_PATH:-}" ] && args+=("--tracer-socket-path-connect" "$TRACER_SOCKET_PATH")
 
       # Ignore RTS flags for now. Need to figure out best way to pass a list
       #[ -n "''${RTS_FLAGS:-}" ] && args+=$RTS_FLAGS
@@ -354,12 +355,16 @@ in {
   };
 
   cardano-tracer = writeShellApplication {
-    runtimeInputs = [nixpkgs.coreutils nixpkgs.jq];
+    runtimeInputs = [nixpkgs.coreutils];
     debugInputs = [packages.cardano-tracer];
     name = "entrypoint";
     text = ''
-      args+("")
-      exec ${packages.cardano-tracer}/bin/cardano-tracer run "''${args[@]}"
+      [ -z "''${TRACER_CONFIG:-}" ] && echo "TRACER_CONFIG env var must be set -- aborting" && exit 1
+      args+=("--config" "$TRACER_CONFIG")
+      [ -z "''${HOME:-}" ] && echo "HOME env var must be set -- aborting" && exit 1
+      mkdir -p "$HOME"
+      cd "$HOME"
+      exec ${packages.cardano-tracer}/bin/cardano-tracer "''${args[@]}"
     '';
   };
 
